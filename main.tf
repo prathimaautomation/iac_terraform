@@ -12,7 +12,6 @@ provider "aws" {
 
 # keyword called "resource" provide resource name and give name with specific details to the service
 resource "aws_instance" "app_instance" {
-key_name   = "eng89_prathima"
 
 # resource aws_ec2_instance, name it as eng89_prathima_terraform, ami, type of instance, with or without ip,
 # provide valid ami id
@@ -28,6 +27,8 @@ associate_public_ip_address = true
 tags = {
 	 Name = "eng89_prathima_terraform"
   }
+
+  key_name   = var.aws_key_name
 }
 
 #  most commonly used commands for terraform:

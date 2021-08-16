@@ -18,7 +18,7 @@
 - terraform plan
 - terraform apply
 - terraform destroy
-```Json
+```python
 # Let's build a script to connect to AWS and download/setup all dependencies required
 # keyword: provider aws
 provider "aws" {
