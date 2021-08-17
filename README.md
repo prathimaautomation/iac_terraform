@@ -10,7 +10,7 @@
 - Click Environment Variables. ...
 - In the Edit System Variable (or New System Variable) window, specify the value of the PATH environment variable. ...
 - Name env variables as AWS_ACCESS_KEY_ID for secret key AWS_SECRET_ACCESS_KEY
-
+![](VPC.png)
 ## Let's create our Terraform env to access our AMI to launch ec2 instance
 ### Terrafrom commands:
 - terraform init: initialises the terraform with required dependencies of the provider mentioned in the main.tf 
