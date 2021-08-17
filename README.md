@@ -32,168 +32,431 @@ Infrastructure as code, also referred to as IaC, is an IT practice that codifies
 - terraform apply
 - terraform destroy
 ```python
-# Let's build a script to connect to AWS and download/setup all dependencies required
-# keyword: provider aws
+# Let's build a script to connect to AWS and download/setup all dependencies required 
+
+# Provide a region
 provider "aws" {
-       region = "eu-west-1"	
+        region = "eu-west-1"
 }
 
-# Let's build a vpc 
-resource "aws_vpc" "terraform_vpc_code_test" {
-  cidr_block       = var.cidr_block 
-  instance_tenancy = "default"
-  enable_dns_support = true # gives you an internal domain name
-  enable_dns_hostnames = true # gives you an internal host name
 
+
+
+# VPC 
+resource "aws_vpc" "terraform_vpc" {
+  cidr_block       = var.cidr_block_0 
+  instance_tenancy = "default"
+  # enable_dns_support = true
+  # enable_dns_hostnames = true
+  
   tags = {
     Name = var.vpc_name
   }
-}
+} 
 
-#Let's create subnet for the app
-resource "aws_subnet" "app_subnet"{
-       vpc_id = var.vpc_id
-       cidr_block = "10.210.2.0/24"
-       availability_zone = "eu-west-1a"
-       tags = {
-              Name = "eng89_prathima_terraform_app_subnet"
-       }
-}
 
-# Create Internet Gateway
-resource "aws_internet_gateway" "terraform_igw"{
-       vpc_id = aws_vpc.terraform_vpc_code_test.id
 
-       tags = {
-              Name = var.igw_name
-       }
-}
-
-resource "aws_security_group" "pub_sec_group"{
-       name        = "eng89_prathima_terraform_SG_app"
-       description = "app security group"
-       vpc_id      = aws_vpc.terraform_vpc_code_test.id
-
-# Inbound rules for webapp
-# Inbound rules code block:
-ingress { #ingress is for inbound rules
-  from_port  = 80 # for our app to launch in the browser
-  to_port    = 80 # for our app to launch in the browser
-  protocol   = "HTTP"
-  cidr_blocks = ["0.0.0.0/0"] # allow all
-}
-ingress { 
-  from_port  = 443 
-  to_port    = 443 
-  protocol   = "tcp"
-  cidr_blocks = ["0.0.0.0/0"] # allow all
-}
-ingress { 
-  from_port  = 3000 
-  to_port    = 3000
-  protocol   = "tcp"
-  cidr_blocks = ["0.0.0.0/0"] # allow all
+# INTERNET GATEWAY
+resource "aws_internet_gateway" "terraform_igw" {
+  vpc_id = aws_vpc.terraform_vpc.id
+  
+  tags = {
+    Name = var.igw_name
+  }
 }
 
 
-# Outbound rules code block
-egress { # egress for outbound rules
-  from_port   = 0
-  to_port     = 0
-  protocol    = "-1" # allow all
-  cidr_blocks = ["0.0.0.0/0"]
 
-}
-tags = {
-  Name = "eng89_prathima_terraform_public_SG"
-}
 
-}
 
-resource "aws_security_group_rule" "my_ssh" {
-       type           = "ingress"
-       from_port      = 22
-       to_port        = 22
-       protocol       = "tcp"
-       cidr_blocks    = [var.my_ip]
-       security_group_id = aws_security_group.pub_sec_group.id
+#  PUBLIC SUBNET
+resource "aws_subnet" "app_subnet" {
+    vpc_id = aws_vpc.terraform_vpc.id
+    cidr_block = var.cidr_block_1
+    map_public_ip_on_launch = "true" 
+    availability_zone = "eu-west-1a"
+    tags = {
+        Name = var.pub_subnet_name
+    }
 }
 
-resource "aws_security_group_rule" "vpc_access" {
-       type           = "ingress"
-       from_port      = 0
-       to_port        = 0
-       protocol       = "-1"
-       cidr_blocks    = [var.cidr_block]
-       security_group_id = aws_security_group.pub_sec_group.id
+
+#  Private SUBNET
+resource "aws_subnet" "db_subnet" {
+    vpc_id = aws_vpc.terraform_vpc.id
+    cidr_block = var.cidr_block_2
+    map_public_ip_on_launch = "true" 
+    availability_zone = "eu-west-1a"
+    tags = {
+        Name = var.pri_subnet_name
+    }
 }
-# keyword called "resource" provide resource name and give name with specific details to the service
-resource "aws_instance" "app_instance" {
 
-# resource aws_ec2_instance, name it as eng89_prathima_terraform, ami, type of instance, with or without ip,
-# provide valid ami id
-ami = "ami-026754d4887301d2a"
 
-# provide what type of instance you would like to create 
-instance_type = "t2.micro"
-subnet_id = aws_subnet.app_subnet.id
 
-# we would like public ip for this instance
-associate_public_ip_address = true
+# ROUTE TABLE
 
-#Let's give proper name to this instance using tags (tags is the keyword to name the instance)
-tags = {
-	 Name = "eng89_prathima_terraform_app"
+resource "aws_route_table" "terra_route_table" {
+    vpc_id = aws_vpc.terraform_vpc.id
+
+    route {
+        cidr_block = "0.0.0.0/0"
+        gateway_id = aws_internet_gateway.terraform_igw.id
+    }
+    tags = {
+        Name = "eng89_niki_terra_RT"
+    }
+}
+
+resource "aws_route_table_association" "terra_assoc_RT" {
+    subnet_id = aws_subnet.app_subnet.id
+    route_table_id = aws_route_table.terra_route_table.id
+}
+
+
+
+
+
+# SECURITY GROUPS
+resource "aws_security_group" "pub_sec_group" {
+      
+  name        = "eng89_prathima_terra_app"
+  description = "app security group"
+  vpc_id =    aws_vpc.terraform_vpc.id
+
+
+  ingress {                         # allow to ssh into instance
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.my_ip] # MY IP
+    }
+
+  ingress {                           # allow  for nginx
+    from_port   = "80"
+    to_port     = "80"
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    }
+
+
+
+  ingress {                         # reverse proxy
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    }
+
+  egress {                          # allow all outbound traffic 
+    from_port  = 0
+    to_port    = 0
+    protocol   = -1
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  key_name   = var.aws_key_name
+  tags = {
+   Name = "eng89_prathima_terra_public_SG"
+  }
+}
+
+
+resource "aws_security_group" "pri_sec_group" {
+      
+  name        = "eng89_prathima_terra_db"
+  description = "db security group"
+  vpc_id =    aws_vpc.terraform_vpc.id
+
+
+  ingress {                         # allow to ssh into instance
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.my_ip] # MY IP
+    }
+
+  
+
+  ingress {                           # reverse proxy
+    from_port   = 27017
+    to_port     = 27017
+    protocol    = "tcp"
+    cidr_blocks = ["10.210.1.0/32"]
+    }
+
+  egress {                          # allow all outbound traffic 
+    from_port  = 0
+    to_port    = 0
+    protocol   = -1
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+   Name = "eng89_prathima_terra_private_SG"
+  }
+}
+
+
+# NETWORK ACLs
+resource "aws_network_acl" "public_nacl" {
+  vpc_id = aws_vpc.terraform_vpc.id
+
+  
+  ingress {
+      protocol   = "tcp"
+      rule_no    = 100
+      action     = "allow"
+      cidr_block = "0.0.0.0/0"
+      from_port  = 80
+      to_port    = 80
+    }
+
+
+
+  ingress {
+      protocol   = "tcp"
+      rule_no    = 120
+      action     = "allow"
+      cidr_block = var.my_ip # MY IP
+      from_port  = 22
+      to_port    = 22
+    }
+
+  egress {
+      protocol   = "tcp"
+      rule_no    = 110
+      action     = "allow"
+      cidr_block = "0.0.0.0/0"
+      from_port  = 80
+      to_port    = 80
+    }
+
+  egress {
+      protocol   = "tcp"
+      rule_no    = 120
+      action     = "allow"
+      cidr_block = "10.201.2.0/24"
+      from_port  = 27017
+      to_port    = 27017
+    }
+
+
+
+  tags = {
+    Name = "eng89_terra_prathima_nACL_pub"
+  }
+}
+
+# NETWORK ACLs
+resource "aws_network_acl" "private_nacl" {
+  vpc_id = aws_vpc.terraform_vpc.id
+
+  
+  ingress {
+      protocol   = "tcp"
+      rule_no    = 100
+      action     = "allow"
+      cidr_block = var.my_ip
+      from_port  = 22
+      to_port    = 22
+    }
+
+
+
+  ingress {
+      protocol   = "tcp"
+      rule_no    = 110
+      action     = "allow"
+      cidr_block = var.cidr_block_2 # DB
+      from_port  = 27017
+      to_port    = 27017
+    }
+
+  
+  ingress {
+      protocol   = "tcp"
+      rule_no    = 120
+      action     = "allow"
+      cidr_block = "0.0.0.0/0" 
+      from_port  = 1024
+      to_port    = 65535
+    }
+
+ingress {
+      protocol   = "tcp"
+      rule_no    = 130
+      action     = "allow"
+      cidr_block = "0.0.0.0/0" 
+      from_port  = 80
+      to_port    = 80
+    }
+
+ingress {
+      protocol   = "tcp"
+      rule_no    = 140
+      action     = "allow"
+      cidr_block = "0.0.0.0/0" 
+      from_port  = 443
+      to_port    = 443
+    }
+
+
+
+
+  egress {
+      protocol   = "tcp"
+      rule_no    = 100
+      action     = "allow"
+      cidr_block = "0.0.0.0/0"
+      from_port  = 80
+      to_port    = 80
+    }
+
+  egress {
+      protocol   = "tcp"
+      rule_no    = 110
+      action     = "allow"
+      cidr_block = "10.201.2.0/24"
+      from_port  = 1024
+      to_port    = 65535
+    }
+
+
+
+  tags = {
+    Name = "eng89_terra_prathima_nACL_pri"
+  }
+}
+
+
+
+# APP INSTANCE
+resource "aws_instance" "app_instance" {
+ami                 = var.app_ami_id
+instance_type       = "t2.micro"
+
+subnet_id = aws_subnet.app_subnet.id
+associate_public_ip_address = true
+
+
+vpc_security_group_ids = ["${aws_security_group.pub_sec_group.id}"]
+
+
+tags = {
+      Name = var.app_name   
+ }
+
+ key_name = var.aws_key_name # goes to varaible.tf file
+
+
+# connection {
+#  type        = "ssh"
+#  user        = "ubuntu"
+#  private_key = file("${var.aws_key_path}")
+#  host        = self.associate_public_ip_address
+# }
+
+}
+
+# DB INSTANCE
+resource "aws_instance" "db_instance" {
+ami                 = var.db_ami_id
+instance_type       = "t2.micro"
+
+subnet_id = aws_subnet.db_subnet.id
+associate_public_ip_address = true
+
+
+vpc_security_group_ids = ["${aws_security_group.pri_sec_group.id}"]
+
+
+tags = {
+      Name = var.db_name   
+ }
+
+ key_name = var.aws_key_name # goes to varaible.tf file
+
+
 }
 ```
 ### variable.tf
 ```python
-# Let's create variables for our resources in the main.tf to make use of DRY
+  
+# let's create variable fo rour resources in mian.tf to make use of DRY
 
 
-variable "name" {
-  default="eng89_prathima_terraform_app"
+variable "cidr_block_0" {
+  default="10.210.0.0/16"
 }
 
-variable "app_ami_id"{
-    default = "ami-026754d4887301d2a"
+
+variable "cidr_block_1" {
+  default="10.210.1.0/24"
 }
+
+
+variable "cidr_block_2" {
+  default="10.210.2.0/24"
+}
+
+
+variable "vpc_name" {
+  default = "eng89_prathima_terra_vpc"
+}
+
+
+
+variable "pub_subnet_name" {
+  default = "eng89_prathima_terra_subnet_public"
+}
+
+variable "pri_subnet_name" {
+  default = "eng89_prathima_terra_subnet_private"
+}
+
 variable "vpc_id" {
-  default="vpc-07e47e9d90d2076da"
+
+  default = "vpc-07e47e9d90d2076da"
 }
 
-variable "vpc_name"{
-    default = "eng89_prathima_terraform_vpc"
 
+
+variable "igw_name" {
+  default = "eng89_prathima_terra_IG"
 }
 
-variable "cidr_block"{
-    default = "10.210.0.0/16"
-}
-variable "igw_name"{
-    default = "eng89_prathima_terraform_igw"
+
+
+variable "app_ami_id" {
+  default="ami-026754d4887301d2a" # ansible app ami
 }
 
-variable "aws_subnet"{
+variable "db_ami_id" {
+  default="ami-08abee4e4ddf9b9ba" # ansible app ami
+}
 
-    default = "eng89_prathima_terraform_subnet"
+# Let's creatge a variable to apply DRY
+
+variable "app_name" {
+  default="eng89_prathima_terra_app"
+}
+variable "db_name" {
+  default="eng89_prathima_terra_db"
 }
 
 variable "my_ip" {
 
-  default = "2.100.4.137/32"
+  default = "[my_ip]/32"
 
 }
 
-variable "aws_key_name"{
-    default = "eng89_prathima1"
+variable "aws_key_name" {
+  default = "eng89_prathima1"
 }
 
-variable "aws_key_path"{
-    default = "~/.ssh/eng89_prathima1.pem"
+variable "aws_key_path" {
+
+  default = "~/.ssh/eng89_prathima1.pem"
 }
 ```
 ### Let's run the main.tf as below:
