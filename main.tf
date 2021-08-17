@@ -121,6 +121,7 @@ ami = "ami-026754d4887301d2a"
 # provide what type of instance you would like to create 
 instance_type = "t2.micro"
 subnet_id = aws_subnet.eng89_prathima_app_subnet.id
+vpc_security_group_ids = [aws_security_group.eng89_prathima_public_security_group.id]
 # we would like public ip for this instance
 associate_public_ip_address = true
 
