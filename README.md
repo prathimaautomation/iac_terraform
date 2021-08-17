@@ -198,4 +198,4 @@ variable "aws_key_path"{
 ```
 ### Let's run the main.tf as below:
 - terraform plan #checks the syntax errors
-- terraform play #builds the resources from the code
+- terraform apply #builds the resources from the code
