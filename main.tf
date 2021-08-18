@@ -152,7 +152,7 @@ resource "aws_security_group" "pri_sec_group" {
     from_port   = 27017
     to_port     = 27017
     protocol    = "tcp"
-    cidr_blocks = ["10.210.1.0/32"]
+    cidr_blocks = ["10.210.1.0/32"] # aws_instance.app_instance.private_ip
     }
 
   egress {                          # allow all outbound traffic 
