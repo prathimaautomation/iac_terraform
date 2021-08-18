@@ -70,12 +70,17 @@ resource "aws_route_table" "terra_route_table" {
         gateway_id = aws_internet_gateway.terraform_igw.id
     }
     tags = {
-        Name = "eng89_niki_terra_RT"
+        Name = "eng89_prathima_terra_RT"
     }
 }
 
-resource "aws_route_table_association" "terra_assoc_RT" {
+resource "aws_route_table_association" "app_terra_assoc_RT" {
     subnet_id = aws_subnet.app_subnet.id
+    route_table_id = aws_route_table.terra_route_table.id
+}
+
+resource "aws_route_table_association" "db_terra_assoc_RT" {
+    subnet_id = aws_subnet.db_subnet.id
     route_table_id = aws_route_table.terra_route_table.id
 }
 
@@ -201,7 +206,7 @@ resource "aws_network_acl" "public_nacl" {
       protocol   = "tcp"
       rule_no    = 120
       action     = "allow"
-      cidr_block = "10.201.2.0/24"
+      cidr_block = "10.210.2.0/24"
       from_port  = 27017
       to_port    = 27017
     }
@@ -282,7 +287,7 @@ ingress {
       protocol   = "tcp"
       rule_no    = 110
       action     = "allow"
-      cidr_block = "10.201.2.0/24"
+      cidr_block = "10.210.1.0/24"
       from_port  = 1024
       to_port    = 65535
     }
@@ -314,13 +319,18 @@ tags = {
 
  key_name = var.aws_key_name # goes to varaible.tf file
 
+#runs commands in instance
+# provisioner "file" {
+#   source ="script.sh"
+#   destination = "/script.sh"
+# }
 
 # connection {
-#  type        = "ssh"
-#  user        = "ubuntu"
-#  private_key = file("${var.aws_key_path}")
-#  host        = self.associate_public_ip_address
-# }
+#   type        = "ssh"
+#   user        = "ubuntu"
+#   private_key = file("${var.aws_key_path}")
+#   host        = self.public_ip
+#  }
 
 }
 

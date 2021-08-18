@@ -13,24 +13,34 @@ Infrastructure as code, also referred to as IaC, is an IT practice that codifies
 - Alignment with DevOps
 `With the infrastructure setup written as code, it can go through the same version control, automated testing and other steps of a continuous integration and continuous delivery (CI/CD) pipeline that developers use for application code.`
 
-## Terraform installation and setting up the path in the env variable
-- Securing AWS keys with Terraform
-- Setting Env variables for our AWS secret and access keys
-- On windows click on windows keys and type settings
-- Windows
-- In Search, search for and then select: System (Control Panel)
-- Click the Advanced system settings link.
-- Click Environment Variables. ...
-- In the Edit System Variable (or New System Variable) window, specify the value of the PATH environment variable. ...
-- Name env variables as AWS_ACCESS_KEY_ID for secret key AWS_SECRET_ACCESS_KEY
-![](VPC.png)
-## Let's create our Terraform env to access our AMI to launch ec2 instance
-### Terrafrom commands:
-- terraform init: initialises the terraform with required dependencies of the provider mentioned in the main.tf 
+### What is Terraform?
+* Terraform is a tool for building, changing, and versioning infrastructure safely and efficiently. Terraform can manage existing and popular service providers as well as custom in-house solutions. Configuration files describe to Terraform the components needed to run a single application or your entire datacenter.
 
-- terraform plan
-- terraform apply
-- terraform destroy
+### Benefits of Terraform?
+* Terraform modules are useful because they allow complex resources to be automated with re-usable, configurable constructs.
+* Cloud independent - works with different cloud providers, allowing for multi-cloud configuration
+* Can effectively scale up/down to meet the current load.
+* Reduced time to provision and reduced development costs.
+* Ease of use.
+* Simplicity, it does a lot of work for us behind, in the background.
+### Installation
+* Download Terraform for the applicable platform here: https://www.terraform.io/downloads.html
+* Extract and place the terraform file in a file location of your choice.
+* In Search, type and select Edit the system environment variables.
+* Click Environment Variables...
+* Edit the Path variable in User variables.
+* Click New, then add the file path of the terraform file inside
+#### Commands
+* terraform init: initialises the terraform with required dependencies of the provider mentioned in the main.tf.
+* terraform plan: checks the syntax of the code. Lists the jobs to be done (in main.tf).
+* terraform apply: launches and executes the tasks in main.tf
+* terraform destroy: destroys/terminates services run in main.tf
+Creating an EC2 Instance from an AMI
+
+![](VPC.png)
+
+## Let's create our Terraform env to access our AMI to launch ec2 instance
+
 ```python
 # Let's build a script to connect to AWS and download/setup all dependencies required 
 
@@ -104,7 +114,7 @@ resource "aws_route_table" "terra_route_table" {
         gateway_id = aws_internet_gateway.terraform_igw.id
     }
     tags = {
-        Name = "eng89_niki_terra_RT"
+        Name = "eng89_prathima_terra_RT"
     }
 }
 
@@ -235,7 +245,7 @@ resource "aws_network_acl" "public_nacl" {
       protocol   = "tcp"
       rule_no    = 120
       action     = "allow"
-      cidr_block = "10.201.2.0/24"
+      cidr_block = "10.210.2.0/24"
       from_port  = 27017
       to_port    = 27017
     }
@@ -316,7 +326,7 @@ ingress {
       protocol   = "tcp"
       rule_no    = 110
       action     = "allow"
-      cidr_block = "10.201.2.0/24"
+      cidr_block = "10.210.1.0/24"
       from_port  = 1024
       to_port    = 65535
     }
@@ -348,13 +358,18 @@ tags = {
 
  key_name = var.aws_key_name # goes to varaible.tf file
 
+#runs commands in instance
+# provisioner "file" {
+#   source ="script.sh"
+#   destination = "/script.sh"
+# }
 
 # connection {
-#  type        = "ssh"
-#  user        = "ubuntu"
-#  private_key = file("${var.aws_key_path}")
-#  host        = self.associate_public_ip_address
-# }
+#   type        = "ssh"
+#   user        = "ubuntu"
+#   private_key = file("${var.aws_key_path}")
+#   host        = self.public_ip
+#  }
 
 }
 
@@ -363,7 +378,7 @@ resource "aws_instance" "db_instance" {
 ami                 = var.db_ami_id
 instance_type       = "t2.micro"
 
-subnet_id = aws_subnet.db_subnet.id
+subnet_id = aws_subnet.app_subnet.id
 associate_public_ip_address = true
 
 
@@ -376,87 +391,6 @@ tags = {
 
  key_name = var.aws_key_name # goes to varaible.tf file
 
-
-}
-```
-### variable.tf
-```python
-  
-# let's create variable fo rour resources in mian.tf to make use of DRY
-
-
-variable "cidr_block_0" {
-  default="10.210.0.0/16"
-}
-
-
-variable "cidr_block_1" {
-  default="10.210.1.0/24"
-}
-
-
-variable "cidr_block_2" {
-  default="10.210.2.0/24"
-}
-
-
-variable "vpc_name" {
-  default = "eng89_prathima_terra_vpc"
-}
-
-
-
-variable "pub_subnet_name" {
-  default = "eng89_prathima_terra_subnet_public"
-}
-
-variable "pri_subnet_name" {
-  default = "eng89_prathima_terra_subnet_private"
-}
-
-variable "vpc_id" {
-
-  default = "vpc-07e47e9d90d2076da"
-}
-
-
-
-variable "igw_name" {
-  default = "eng89_prathima_terra_IG"
-}
-
-
-
-variable "app_ami_id" {
-  default="ami-026754d4887301d2a" # ansible app ami
-}
-
-variable "db_ami_id" {
-  default="ami-08abee4e4ddf9b9ba" # ansible app ami
-}
-
-# Let's creatge a variable to apply DRY
-
-variable "app_name" {
-  default="eng89_prathima_terra_app"
-}
-variable "db_name" {
-  default="eng89_prathima_terra_db"
-}
-
-variable "my_ip" {
-
-  default = "[my_ip]/32"
-
-}
-
-variable "aws_key_name" {
-  default = "eng89_prathima1"
-}
-
-variable "aws_key_path" {
-
-  default = "~/.ssh/eng89_prathima1.pem"
 }
 ```
 ### Let's run the main.tf as below:
